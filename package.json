@@ -1,0 +1,33 @@
+{
+  "name": "interpreter-ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rimraf dist",
+    "compile": "cross-env-shell babel src -d dist --source-maps --extensions '.ts'",
+    "build": "npm run clean && npm run compile",
+    "typecheck": "tsc --p .",
+    "build-typecheck": "npm run typecheck && npm run build",
+    "start": "npm run build-typecheck && node ./dist/index.js",
+    "start:dev": "nodemon",
+    "lox": "ts-node src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^16.11.11",
+    "nodemon": "^2.0.15",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.2"
+  },
+  "dependencies": {
+    "@babel/cli": "^7.16.0",
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.4",
+    "@babel/preset-typescript": "^7.16.0",
+    "cross-env": "^7.0.3",
+    "rimraf": "^3.0.2"
+  }
+}
