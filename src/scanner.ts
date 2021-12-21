@@ -1,6 +1,8 @@
 import { TokenType } from "./tokenType";
 import { IToken, Token } from "./token";
 
+export type LoxObject = string | number | boolean | null;
+
 export class Scanner {
   private source: string;
   private tokens: IToken[] = [];
@@ -37,6 +39,8 @@ export class Scanner {
       this.start = this.current;
       this.scanToken();
     }
+    // tokens.add(new Token(EOF, "", null, line));
+    this.addToken("EOF", null);
     return this.tokens;
   }
 
@@ -224,7 +228,7 @@ export class Scanner {
 
   addToken(type: TokenType, literal: null | string | number) {
     const lexeme = this.source.substring(this.start, this.current);
-    console.log("[add_token] lexeme: ", lexeme);
+    // console.log("[add_token] lexeme: ", lexeme);
     this.tokens.push(Token({ type, lexeme, literal, line: this.line }));
   }
 

@@ -1,0 +1,184 @@
+import { IToken } from "./token";
+import * as ast from "./Exp";
+import { TokenType } from "./tokenType";
+
+export class Parser {
+  private tokens: IToken[] = [];
+  private current = 0;
+  constructor(tokens: IToken[]) {
+    this.tokens = tokens;
+  }
+
+  parse() {
+    try {
+      return this.expression();
+    } catch (error) {
+      throw new Error(`Error during parsing. ${error}`);
+    }
+  }
+
+  private expression() {
+    return this.equality();
+  }
+
+  private equality(): ast.Expr {
+    let expr = this.comparison();
+    
+    while (this.match("BANG_EQUAL", "EQUAL_EQUAL")) {
+      const operator = this.previous();
+      const right = this.comparison();
+      expr = new ast.BinaryExpr(expr, operator, right);
+    }
+    // console.log("[equality] : ");
+    return expr;
+  }
+
+  private comparison(): ast.Expr {
+    let expr = this.term();
+    
+    while (this.match("GREATER", "GREATER_EQUAL", "LESS", "LESS_EQUAL")) {
+      const operator = this.previous();
+      const right = this.term();
+      expr = new ast.BinaryExpr(expr, operator, right);
+    }
+    // console.log("[comparision] : ");
+    return expr;
+  }
+
+  private term(): ast.Expr {
+    let expr = this.factor();
+    
+    while (this.match("MINUS", "PLUS")) {
+      const operator = this.previous();
+      // console.log("[term] : while: ", operator, expr);
+      const right = this.factor();
+      // console.log("[term] : RIGHT: ",right);
+      expr = new ast.BinaryExpr(expr, operator, right);
+    }
+    // console.log("[term] : ");
+    return expr;
+  }
+
+  private factor(): ast.Expr {
+    let expr = this.unary();
+    // console.log("[factor] : ");
+    
+    while (this.match("SLASH", "STAR")) {
+      const operator = this.previous();
+      const right = this.unary();
+      expr = new ast.BinaryExpr(expr, operator, right);
+    }
+    
+    return expr;
+  }
+
+  private unary(): ast.Expr {
+    if (this.match("BANG", "MINUS")) {
+      const operator = this.previous();
+      const right = this.unary();
+      return new ast.UnaryExpr(operator, right);
+    }
+    
+    // console.log("[unary] : ");
+    return this.primary();
+  }
+
+  private primary(): ast.Expr {
+    if (this.match("FALSE")) return new ast.LiteralExpr(false);
+    if (this.match("TRUE")) return new ast.LiteralExpr(true);
+    if (this.match("NIL")) return new ast.LiteralExpr(null);
+    
+    if (this.match("NUMBER", "STRING")) {
+      // console.log("[primary] : match NUMBER or STRING: ", this.tokens[this.current - 1]);
+      
+      return new ast.LiteralExpr(this.previous().literal);
+    }
+
+    if (this.match("LEFT_PAREN")) {
+      const expr = this.expression();
+      this.consume("RIGHT_PAREN", "Expect ')' after expression.");
+      return new ast.GroupingExpr(expr);
+    }
+
+    throw new Error(`Error ${this.peek()} Expect expression.`);
+  }
+
+  private match(...args: TokenType[]) {
+    // console.log("[match] args... ", args)
+    const result = args.some((type) => {
+      if (this.check(type)) {
+        this.advance();
+        return true;
+      }
+      return false;
+    });
+
+    return result;
+  }
+
+  private consume(type: TokenType, message: string): IToken {
+    if (this.check(type)) {
+      return this.advance();
+    }
+
+    // throw error(peek(), message);
+    throw new Error(`Error ${this.peek()} Expect expression.`);
+  }
+
+  private check(type: TokenType): boolean {
+    if (this.isAtEnd()) return false;
+    return this.peek().type == type;
+  }
+
+  private advance() {
+    if (!this.isAtEnd()) {
+      this.current++;
+    }
+    return this.previous(); // TODO why previous() ?
+  }
+
+  private isAtEnd() {
+    // return peek().type == EOF;
+    return this.peek().type == "EOF";
+  }
+
+  private peek() {
+    // console.log("[peek] : ", this.tokens[this.current])
+    return this.tokens[this.current];
+    // return tokens.get(this.current);
+  }
+
+  private previous() {
+    // return this.tokens.get(current - 1);
+    return this.tokens[this.current - 1];
+  }
+
+  // private ParseError error(Token token, String message) {
+  // 	IntroTest.error(token, message);
+  // 	return new ParseError();
+  // }
+
+  private synchronize() {
+    this.advance();
+
+    while (!this.isAtEnd()) {
+      if (this.previous().type == "SEMICOLON") {
+        return;
+      }
+
+      switch (this.peek().type) {
+        case "CLASS":
+        case "FUN":
+        case "VAR":
+        case "FOR":
+        case "IF":
+        case "WHILE":
+        case "PRINT":
+        case "RETURN":
+          return;
+      }
+
+      this.advance();
+    }
+  }
+}
