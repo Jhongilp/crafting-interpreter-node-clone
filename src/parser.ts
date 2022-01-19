@@ -1,5 +1,6 @@
 import { IToken } from "./token";
 import * as ast from "./Exp";
+import { Expression, Print, Var, Stmt } from "./Stmt";
 import { TokenType } from "./tokenType";
 
 export class Parser {
@@ -11,7 +12,11 @@ export class Parser {
 
   parse() {
     try {
-      return this.expression();
+      const statements: Stmt[] = [];
+      while (!this.isAtEnd()) {
+        statements.push(this.statement());
+      }
+      return statements;
     } catch (error) {
       throw new Error(`Error during parsing. ${error}`);
     }
@@ -21,9 +26,27 @@ export class Parser {
     return this.equality();
   }
 
+  private statement(): Stmt {
+    if (this.match("PRINT")) return this.printStatement();
+
+    return this.expressionStatement();
+  }
+
+  private printStatement(): Stmt {
+    const value = this.expression();
+    this.consume("SEMICOLON", "Expect ';' after value.");
+    return new Print(value);
+  }
+
+  private expressionStatement(): Stmt {
+    const expr = this.expression();
+    this.consume("SEMICOLON", "Expect ';' after expression.");
+    return new Expression(expr);
+  }
+
   private equality(): ast.Expr {
     let expr = this.comparison();
-    
+
     while (this.match("BANG_EQUAL", "EQUAL_EQUAL")) {
       const operator = this.previous();
       const right = this.comparison();
@@ -35,7 +58,7 @@ export class Parser {
 
   private comparison(): ast.Expr {
     let expr = this.term();
-    
+
     while (this.match("GREATER", "GREATER_EQUAL", "LESS", "LESS_EQUAL")) {
       const operator = this.previous();
       const right = this.term();
@@ -47,7 +70,7 @@ export class Parser {
 
   private term(): ast.Expr {
     let expr = this.factor();
-    
+
     while (this.match("MINUS", "PLUS")) {
       const operator = this.previous();
       // console.log("[term] : while: ", operator, expr);
@@ -62,13 +85,13 @@ export class Parser {
   private factor(): ast.Expr {
     let expr = this.unary();
     // console.log("[factor] : ");
-    
+
     while (this.match("SLASH", "STAR")) {
       const operator = this.previous();
       const right = this.unary();
       expr = new ast.BinaryExpr(expr, operator, right);
     }
-    
+
     return expr;
   }
 
@@ -78,7 +101,7 @@ export class Parser {
       const right = this.unary();
       return new ast.UnaryExpr(operator, right);
     }
-    
+
     // console.log("[unary] : ");
     return this.primary();
   }
@@ -87,10 +110,10 @@ export class Parser {
     if (this.match("FALSE")) return new ast.LiteralExpr(false);
     if (this.match("TRUE")) return new ast.LiteralExpr(true);
     if (this.match("NIL")) return new ast.LiteralExpr(null);
-    
+
     if (this.match("NUMBER", "STRING")) {
       // console.log("[primary] : match NUMBER or STRING: ", this.tokens[this.current - 1]);
-      
+
       return new ast.LiteralExpr(this.previous().literal);
     }
 
