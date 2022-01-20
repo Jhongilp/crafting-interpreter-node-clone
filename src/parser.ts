@@ -2,6 +2,7 @@ import { IToken } from "./token";
 import * as ast from "./Exp";
 import { Expression, Print, Var, Stmt } from "./Stmt";
 import { TokenType } from "./tokenType";
+import { errorReporter } from "./error";
 
 export class Parser {
   private tokens: IToken[] = [];
@@ -11,15 +12,16 @@ export class Parser {
   }
 
   parse() {
+    const statements: Stmt[] = [];
     try {
-      const statements: Stmt[] = [];
       while (!this.isAtEnd()) {
         statements.push(this.statement());
       }
-      return statements;
     } catch (error) {
-      throw new Error(`Error during parsing. ${error}`);
+      errorReporter.report(error as Error);
+      // throw new Error(`Error during parsing. ${error}`);
     }
+    return statements;
   }
 
   private expression() {
@@ -143,9 +145,8 @@ export class Parser {
     if (this.check(type)) {
       return this.advance();
     }
-
-    // throw error(peek(), message);
-    throw new Error(`Error ${this.peek()} Expect expression.`);
+    const errorMsg = "Error at line: " + this.peek().line + " " + message;
+    throw new Error(errorMsg);
   }
 
   private check(type: TokenType): boolean {

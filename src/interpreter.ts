@@ -6,18 +6,41 @@ import {
   UnaryExpr,
   GroupingExpr,
 } from "./Exp";
+import { StmtVisitor, Expression, Print, Var, Stmt } from "./Stmt";
 import { LoxObject } from "./scanner";
 import { IToken } from "./token";
-import { RuntimeError } from "./error";
+import { RuntimeError, errorReporter } from "./error";
 
-export class Interpreter implements ExprVisitor<LoxObject> {
-  interpret(expression: Expr) {
-    const value = this.evaluate(expression);
-    console.log(this.stringify(value));
+export class Interpreter implements ExprVisitor<LoxObject>, StmtVisitor<void> {
+  interpret(statements: Stmt[]) {
+    try {
+      statements.forEach((statement) => {
+        this.execute(statement);
+      });
+    } catch (error) {
+      errorReporter.report(error as Error);
+    }
   }
 
   private evaluate(expr: Expr): LoxObject {
     return expr.accept(this);
+  }
+
+  private execute(stmt: Stmt): void {
+    stmt.accept(this);
+  }
+
+  public visitExpressionStmt(stmt: Expression): void {
+    this.evaluate(stmt.expression);
+  }
+
+  public visitPrintStmt(stmt: Print): void {
+    const value = this.evaluate(stmt.expression);
+    console.log(this.stringify(value));
+  }
+
+  public visitVarStmt(stmt: Var): void {
+      
   }
 
   private stringify(object: LoxObject) {
