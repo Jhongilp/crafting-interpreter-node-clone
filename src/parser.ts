@@ -15,10 +15,12 @@ export class Parser {
     const statements: Stmt[] = [];
     try {
       while (!this.isAtEnd()) {
-        statements.push(this.statement());
+        // statements.push(this.statement());
+        statements.push(this.declaration());
       }
     } catch (error) {
       errorReporter.report(error as Error);
+      this.synchronize();
       // throw new Error(`Error during parsing. ${error}`);
     }
     return statements;
@@ -26,6 +28,13 @@ export class Parser {
 
   private expression() {
     return this.equality();
+  }
+
+  private declaration(): Stmt {
+    if (this.match("VAR")) {
+      return this.varDeclaration();
+    }
+    return this.statement();
   }
 
   private statement(): Stmt {
@@ -38,6 +47,18 @@ export class Parser {
     const value = this.expression();
     this.consume("SEMICOLON", "Expect ';' after value.");
     return new Print(value);
+  }
+
+  private varDeclaration(): Stmt {
+    const name = this.consume("IDENTIFIER", "Expect variable name.");
+
+    let initializer: ast.Expr | null = null;
+    if (this.match("EQUAL")) {
+      initializer = this.expression();
+    }
+
+    this.consume("SEMICOLON", "Expect ';' after variable declaration.");
+    return new Var(name, initializer);
   }
 
   private expressionStatement(): Stmt {
@@ -118,7 +139,9 @@ export class Parser {
 
       return new ast.LiteralExpr(this.previous().literal);
     }
-
+    if (this.match("IDENTIFIER")) {
+      return new ast.Variable(this.previous());
+    }
     if (this.match("LEFT_PAREN")) {
       const expr = this.expression();
       this.consume("RIGHT_PAREN", "Expect ')' after expression.");

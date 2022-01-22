@@ -34,10 +34,10 @@ export class Print implements Stmt {
 }
 
 export class Var implements Stmt {
-  initializer: Expr;
+  initializer: Expr | null;
   name: IToken;
 
-  constructor(name: IToken, initializer: Expr) {
+  constructor(name: IToken, initializer: Expr | null) {
     this.initializer = initializer;
     this.name = name;
   }

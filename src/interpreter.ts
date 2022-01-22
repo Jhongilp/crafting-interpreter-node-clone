@@ -5,13 +5,16 @@ import {
   BinaryExpr,
   UnaryExpr,
   GroupingExpr,
+  Variable,
 } from "./Exp";
 import { StmtVisitor, Expression, Print, Var, Stmt } from "./Stmt";
 import { LoxObject } from "./scanner";
 import { IToken } from "./token";
 import { RuntimeError, errorReporter } from "./error";
-
+import { Environment } from "./environment";
 export class Interpreter implements ExprVisitor<LoxObject>, StmtVisitor<void> {
+  private environment = new Environment();
+
   interpret(statements: Stmt[]) {
     try {
       statements.forEach((statement) => {
@@ -39,8 +42,14 @@ export class Interpreter implements ExprVisitor<LoxObject>, StmtVisitor<void> {
     console.log(this.stringify(value));
   }
 
-  public visitVarStmt(stmt: Var): void {
-      
+  public visitVarStmt(stmt: Var) {
+    let value: LoxObject = null;
+    if (stmt.initializer != null) {
+      value = this.evaluate(stmt.initializer);
+    }
+
+    this.environment.define(stmt.name.lexeme, value);
+    return null;
   }
 
   private stringify(object: LoxObject) {
@@ -95,9 +104,11 @@ export class Interpreter implements ExprVisitor<LoxObject>, StmtVisitor<void> {
         this.checkNumberOperand(expr.operator, right);
         return -(right as number);
     }
-
-    // Unreachable.
     return null;
+  }
+
+  public visitVariableExpr(expr: Variable): LoxObject {
+    return this.environment.get(expr.name);
   }
 
   visitBinaryExpr(expr: BinaryExpr): LoxObject {
